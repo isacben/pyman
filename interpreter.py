@@ -9,18 +9,18 @@ with open("request.leo") as f:
 tokens = ['GET', "HTTP", "POSTMAN"]
 program = []
 token_counter = 0
-some_string = ""
+arbitrary_string = ""
 
 for line in program_lines:
     parts  = line.split(" ")
 
     if parts[0] in tokens:
 
-        # save sting if there is one
-        if len(some_string) > 0:
-            program.append(some_string)
+        # save arbitrary string if there is one
+        if len(arbitrary_string) > 0:
+            program.append(arbitrary_string)
             token_counter += 1
-            some_string = ""
+            arbitrary_string = ""
         
         opcode = parts[0]
 
@@ -31,70 +31,53 @@ for line in program_lines:
         # store opcode token
         program.append(opcode)
         token_counter += 1
+
         # handle each opcode
         if opcode == "GET":
             # expecting a url 
             url = parts[1]
             program.append(url)
             token_counter += 1
+
         elif opcode == "HTTP":
             # expecting a number
             number = int(parts[1])
             program.append(number)
             token_counter += 1
+        
         elif opcode == "POSTMAN":
             title = line.split(" ", 1)[1]
             program.append(title)
             token_counter += 1
+
     else:
-        some_string += line
+        arbitrary_string += line
     
 # add strings in case the text is by the end of the file
-if len(some_string) > 0:
-    program.append(some_string)
+if len(arbitrary_string) > 0:
+    program.append(arbitrary_string)
     token_counter += 1
 
-# program.append('END')
 
 for p in program:
     print(p)
 
-print("token_counter:", token_counter)
 
-
-class Stack:
-
-    def __init__(self, size):
-        self.buf = [0 for _ in range(size)]
-        self.sp    = -1
-
-    def push(self, number):
-        self.sp += 1
-        self.buf[self.sp] = number
-    
-    def pop(self):
-        number = self.buf[self.sp]
-        self.sp -= 1
-        return number
-    
-    def top(self):
-        return self.buf[self.sp]
 
 def run(params):
     print(params)
 
 
 pc = 0
-# stack = Stack(256)
-
 params = {}
 
-print(len(program))
 while pc < len(program):
     opcode = program[pc]
     pc += 1
 
     if opcode == "GET":
+        # the request should be the first instruction of a block
+        # if a new block is starting, try to execute the previous block
         if params != {}:
             run(params)
             params = {}
@@ -112,7 +95,7 @@ while pc < len(program):
         pc += 1
 
     else:
-        # is it json?
+        # arbitrary string
         try:
             body = json.loads(opcode)
             params['body'] = body
