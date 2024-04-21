@@ -6,7 +6,7 @@ GET https://end.com
 HTTP 400
 POSTMAN The end
 
-POST https://airwallex.com
+GET https://airwallex.com
 HTTP 202
 {
     "hello": "world",
@@ -14,3 +14,6 @@ HTTP 202
     "some": {"more": "complex"},
     "count": 0
 }
+
+GET https://some.com
+some-text

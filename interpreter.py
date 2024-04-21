@@ -1,3 +1,6 @@
+import json
+
+
 # read file lines
 program_lines = []
 with open("request.leo") as f:
@@ -39,6 +42,10 @@ for line in program_lines:
             number = int(parts[1])
             program.append(number)
             token_counter += 1
+        elif opcode == "POSTMAN":
+            title = line.split(" ", 1)[1]
+            program.append(title)
+            token_counter += 1
     else:
         some_string += line
     
@@ -47,7 +54,7 @@ if len(some_string) > 0:
     program.append(some_string)
     token_counter += 1
 
-program.append('END')
+# program.append('END')
 
 for p in program:
     print(p)
@@ -73,19 +80,50 @@ class Stack:
     def top(self):
         return self.buf[self.sp]
 
-pc = 0
-stack = Stack(256)
-last_request = []
+def run(params):
+    print(params)
 
-while program[pc] != "END":
+
+pc = 0
+# stack = Stack(256)
+
+params = {}
+
+print(len(program))
+while pc < len(program):
     opcode = program[pc]
     pc += 1
 
     if opcode == "GET":
-        url = program[pc]
+        if params != {}:
+            run(params)
+            params = {}
+        
+        params['request'] = opcode
+        params['url'] = program[pc]
         pc += 1
 
-        stack.push('{"get": "result"}')
+    elif opcode == "HTTP":
+        params['http'] = program[pc]
+        pc += 1
+
+    elif opcode == "POSTMAN":
+        params['postman'] = program[pc]
+        pc += 1
+
+    else:
+        # is it json?
+        try:
+            body = json.loads(opcode)
+            params['body'] = body
+        except Exception as e:
+            print(f'Error in line {pc-1}')
+            print(e)
+
+
+# take into account the last run
+if params != {}:
+    run(params)
 
 # GET
 # command = GET
