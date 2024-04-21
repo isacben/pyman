@@ -1,5 +1,11 @@
 import json
 
+def print_json_error(string, pos):
+#{"hello": "world","hola": "mundo,"some": {"more": "complex"},"count": 0}
+    new_string = string[:pos-1] + '\033[1;37;40m' 
+    new_string += '\033[0;37;41m'+ string[pos-1:pos] 
+    new_string += '\033[1;37;40m' + string[pos:]
+    print(new_string)
 
 # read file lines
 program_lines = []
@@ -11,17 +17,24 @@ program = []
 token_counter = 0
 arbitrary_string = ""
 
-for line in program_lines:
+for line_number, line in enumerate(program_lines):
     parts  = line.split(" ")
 
     if parts[0] in tokens:
 
         # save arbitrary string if there is one
         if len(arbitrary_string) > 0:
-            program.append(arbitrary_string)
-            token_counter += 1
-            arbitrary_string = ""
-        
+            try:
+                body = json.loads(arbitrary_string)
+                program.append(body)
+                token_counter += 1
+                arbitrary_string = ""
+            except json.decoder.JSONDecodeError as e:
+                print(f'Invalid json:')
+                print(e.msg)
+                print_json_error(arbitrary_string, e.pos)
+                exit()
+
         opcode = parts[0]
 
         # check for empty line
@@ -35,32 +48,58 @@ for line in program_lines:
         # handle each opcode
         if opcode == "GET":
             # expecting a url 
-            url = parts[1]
-            program.append(url)
-            token_counter += 1
+            try:
+                url = parts[1]
+                if url.startswith("http://") or url.startswith("https://"):
+                    program.append(url)
+                    token_counter += 1
+                else:
+                    raise Exception
+            except:
+                print(f'Error in line ({line_number + 1}): Invalid url')
+                print(f'>>> {line}')
+                exit()
 
         elif opcode == "HTTP":
             # expecting a number
-            number = int(parts[1])
-            program.append(number)
-            token_counter += 1
+            try:
+                number = int(parts[1])
+                program.append(number)
+                token_counter += 1
+            except:
+                print(f'Error in line ({line_number + 1}): Number was expected.') 
+                print(f'>>> {line}')
+                exit()
+            
         
         elif opcode == "POSTMAN":
-            title = line.split(" ", 1)[1]
-            program.append(title)
-            token_counter += 1
+            try:
+                title = line.split(" ", 1)[1]
+                program.append(title)
+                token_counter += 1
+            except:
+                print(f'Error in line ({line_number + 1}): String was expected')
+                print(f'>>> {line}')
+                exit()
 
     else:
         arbitrary_string += line
     
+    
 # add strings in case the text is by the end of the file
 if len(arbitrary_string) > 0:
-    program.append(arbitrary_string)
-    token_counter += 1
+    try:
+        body = json.loads(arbitrary_string)
+        program.append(body)
+        token_counter += 1
+    except json.decoder.JSONDecodeError as e:
+        print(f'Invalid json:')
+        print(e.msg)
+        print_json_error(arbitrary_string, e.pos)
+        exit()
 
-
-for p in program:
-    print(p)
+#for p in program:
+#    print(p)
 
 
 
@@ -96,12 +135,7 @@ while pc < len(program):
 
     else:
         # arbitrary string
-        try:
-            body = json.loads(opcode)
-            params['body'] = body
-        except Exception as e:
-            print(f'Error in line {pc-1}')
-            print(e)
+        params['body'] = opcode
 
 
 # take into account the last run

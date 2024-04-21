@@ -1,10 +1,11 @@
 
-GET https://first.com
+GET http://first.com
 HTTP 200
+{"isac": "ben"}
 
 GET https://end.com
-HTTP 400
-POSTMAN The end
+HTTP 200
+POSTMAN Request Title 
 
 GET https://airwallex.com
 HTTP 202
@@ -14,6 +15,3 @@ HTTP 202
     "some": {"more": "complex"},
     "count": 0
 }
-
-GET https://some.com
-some-text
