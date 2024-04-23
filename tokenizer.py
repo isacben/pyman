@@ -5,11 +5,26 @@ HTTP 200
 POST http:/bad.url
 '''
 
-import string
-
 DIGITS = '0123456789'
-CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
-print(CHARACTERS)
+LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+
+class Error:
+    def __init__(self, pos_start, pos_end, error_name, details):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+        self.error_name = error_name
+        self.details = details
+    
+    def as_string(self):
+        result  = f'{self.error_name}: {self.details}\n'
+        result += f'File {self.pos_start.fn}, line {self.pos_start.ln + 1}'
+        return result
+
+class IllegalCharError(Error):
+    def __init__(self, pos_start, pos_end, details):
+        super().__init__(pos_start, pos_end, 'Illegal Character', details)
+
 
 class Position:
     def __init__(self, idx, ln, col, fn, ftxt):
@@ -75,17 +90,20 @@ class Lexer:
         tokens = []
 
         while self.current_char != None:
-            if self.current_char in ' \t':
+            if self.current_char in ' \t\r\n':
                 self.advance()
             elif self.current_char in DIGITS:
                 tokens.append(self.make_number())
-            elif self.current_char in CHARACTERS + DIGITS:
+            elif self.current_char in LETTERS:
                 tokens.append(self.make_identifier())
             else:
+                pos_start = self.pos.copy()
+                char = self.current_char
                 self.advance()
-                #return []
+                return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
         
-        return tokens
+        tokens.append(Token(TT_EOF))    
+        return tokens, None
 
     def make_number(self):
         num_str = ''
@@ -100,12 +118,12 @@ class Lexer:
         id_str = ''
         pos_start = self.pos.copy()
 
-        while self.current_char != None and self.current_char in CHARACTERS + DIGITS:
+        while self.current_char != None and self.current_char in LETTERS + DIGITS + ';/?:@&=+$,#' + '-.!~*\'()':
             id_str += self.current_char
             self.advance()
 
         if id_str in KEYWORDS:
-            tok_type = TT_KEYWORD 
+            tok_type = TT_KEYWORD
         elif id_str.startswith('http://') or id_str.startswith('https://'):
             tok_type = TT_URL
         else:
@@ -115,6 +133,7 @@ class Lexer:
 
 
 lexer = Lexer('file_name', text)
-tokens = lexer.make_tokens()
+tokens, error = lexer.make_tokens()
 
-print(tokens)
+if error: print(error.as_string())
+else: print(tokens) 
