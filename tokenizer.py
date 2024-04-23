@@ -1,10 +1,15 @@
 text = '''
-GET 
-GET
-POST 
+GET http://test.com
+GET http://123.com/?p=12
+HTTP 200
+POST http:/bad.url
 '''
 
-LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+import string
+
+DIGITS = '0123456789'
+CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
+print(CHARACTERS)
 
 class Position:
     def __init__(self, idx, ln, col, fn, ftxt):
@@ -30,8 +35,11 @@ class Position:
 
 # TOKENS
 
+TT_STRING   = 'STRING'
+TT_INT      = 'INT'
 TT_URL      = 'URL'
 TT_KEYWORD  = 'KEYWORD'
+TT_EOF      = 'EOF'
 
 class Token:
     def __init__(self, type_, value=None) -> None:
@@ -45,7 +53,9 @@ class Token:
     
 KEYWORDS = [
     'GET',
-    'POST'
+    'POST',
+    'HTTP',
+    '[Postman]'
 ]
 
 
@@ -65,25 +75,42 @@ class Lexer:
         tokens = []
 
         while self.current_char != None:
-            if self.current_char in ' \t\n':
+            if self.current_char in ' \t':
                 self.advance()
-            elif self.current_char in LETTERS:
+            elif self.current_char in DIGITS:
+                tokens.append(self.make_number())
+            elif self.current_char in CHARACTERS + DIGITS:
                 tokens.append(self.make_identifier())
             else:
                 self.advance()
-                return []
+                #return []
         
         return tokens
+
+    def make_number(self):
+        num_str = ''
+        
+        while self.current_char != None and self.current_char in DIGITS:
+            num_str += self.current_char
+            self.advance()
+
+        return Token(TT_INT, int(num_str))
 
     def make_identifier(self):
         id_str = ''
         pos_start = self.pos.copy()
 
-        while self.current_char != None and self.current_char in LETTERS:
+        while self.current_char != None and self.current_char in CHARACTERS + DIGITS:
             id_str += self.current_char
             self.advance()
 
-        tok_type = TT_KEYWORD if id_str in KEYWORDS else 'NULL'
+        if id_str in KEYWORDS:
+            tok_type = TT_KEYWORD 
+        elif id_str.startswith('http://') or id_str.startswith('https://'):
+            tok_type = TT_URL
+        else:
+            tok_type = TT_STRING
+        
         return Token(tok_type, id_str)
 
 
