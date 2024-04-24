@@ -53,6 +53,9 @@ class Position:
 TT_STRING   = 'STRING'
 TT_INT      = 'INT'
 TT_URL      = 'URL'
+TT_GET      = 'GET_REQ'
+TT_POST     = 'POST'
+TT_HTTP     = 'HTTP'
 TT_KEYWORD  = 'KEYWORD'
 TT_EOF      = 'EOF'
 
@@ -61,6 +64,9 @@ class Token:
        self.type = type_
        self.value = value
 
+    def matches(self, type_, value):
+        return self.type == type_ and self.value == value
+    
     def __repr__(self) -> str:
         if self.value: return f'{self.type}:{self.value}' 
         return f'{self.type}'
@@ -122,8 +128,11 @@ class Lexer:
             id_str += self.current_char
             self.advance()
 
-        if id_str in KEYWORDS:
-            tok_type = TT_KEYWORD
+        if id_str == "GET":
+            #tok_type = TT_GET
+            return(Token(TT_GET))
+        elif id_str == "HTTP":
+            return(Token(TT_HTTP))
         elif id_str.startswith('http://') or id_str.startswith('https://'):
             tok_type = TT_URL
         else:
@@ -132,8 +141,102 @@ class Lexer:
         return Token(tok_type, id_str)
 
 
+# NODES
+
+class UrlNode:
+    def __init__(self, tok) -> None:
+        self.tok = tok
+    
+    def __repr__(self) -> str:
+        return f'{self.tok}'
+
+class NumberNode:
+    def __init__(self, tok) -> None:
+        self.tok = tok
+    
+    def __repr__(self) -> str:
+        return f'{self.tok}'
+
+class BinOpNode:
+    def __init__(self, left_node, right_node) -> None:
+       self.left_node = left_node
+       self.right_node = right_node
+
+    def __repr__(self) -> str:
+        return f'({self.left_node}, {self.right_node})' 
+
+class UnaryNode:
+    def __init__(self, op_tok, node) -> None:
+        self.op_tok = op_tok
+        self.node = node
+
+    def __repr__(self) -> str:
+        return f'({self.op_tok}, {self.node})'
+
+
+# PARSER
+
+class Parser:
+    def __init__(self, tokens) -> None:
+         self.tokens = tokens
+         self.tok_idx = -1
+         self.advance()
+
+    def advance(self):
+        self.tok_idx += 1
+        if self.tok_idx < len(self.tokens):
+            self.current_tok = self.tokens[self.tok_idx]
+        return self.current_tok
+        
+    def parse(self):
+        res = self.unary()
+        return res
+
+    def factor(self):
+        tok = self.current_tok
+
+        if tok.type == TT_URL:
+            self.advance()
+            return UrlNode(tok)
+        elif tok.type == TT_INT:
+            self.advance()
+            return NumberNode(tok)
+        
+
+    def unary(self):
+        while self.current_tok.type in (TT_GET, TT_HTTP):
+            op_tok = self.current_tok
+            self.advance()
+            factor = self.factor()
+
+        left = UnaryNode(op_tok, factor)
+
+        print(left)
+        return left
+    
+        
+    
+
+    def term(self):
+        left = self.factor()
+
+        while self.current_tok.type in KEYWORDS:
+            self.advance()
+            right = self.factor() 
+            #left = RequestNode(left, right)
+
+        return left
+
 lexer = Lexer('file_name', text)
 tokens, error = lexer.make_tokens()
 
-if error: print(error.as_string())
-else: print(tokens) 
+if error:
+    print(error)
+    exit(1)
+
+print(tokens)
+# generate AST
+parser = Parser(tokens)
+ast = parser.parse()
+
+print(ast)
