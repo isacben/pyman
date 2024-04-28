@@ -1,8 +1,14 @@
+# another option: https://www.youtube.com/watch?v=LgsW0eGk-6U
+
 text = '''
 GET http://test.com
+HTTP 301
 GET http://123.com/?p=12
 HTTP 200
-POST http:/bad.url
+GET http://yes.com
+HTTP 400
+GET http://no.com
+HTTP 300
 '''
 
 DIGITS = '0123456789'
@@ -53,9 +59,10 @@ class Position:
 TT_STRING   = 'STRING'
 TT_INT      = 'INT'
 TT_URL      = 'URL'
-TT_GET      = 'GET_REQ'
+TT_GET      = 'GET'
 TT_POST     = 'POST'
 TT_HTTP     = 'HTTP'
+TT_IN       = 'IN'
 TT_KEYWORD  = 'KEYWORD'
 TT_EOF      = 'EOF'
 
@@ -129,7 +136,6 @@ class Lexer:
             self.advance()
 
         if id_str == "GET":
-            #tok_type = TT_GET
             return(Token(TT_GET))
         elif id_str == "HTTP":
             return(Token(TT_HTTP))
@@ -160,10 +166,11 @@ class NumberNode:
 class BinOpNode:
     def __init__(self, left_node, right_node) -> None:
        self.left_node = left_node
+       self.op_tok = Token(TT_IN)
        self.right_node = right_node
 
     def __repr__(self) -> str:
-        return f'({self.left_node}, {self.right_node})' 
+        return f'({self.left_node}, {self.op_tok}, {self.right_node})' 
 
 class UnaryNode:
     def __init__(self, op_tok, node) -> None:
@@ -173,6 +180,22 @@ class UnaryNode:
     def __repr__(self) -> str:
         return f'({self.op_tok}, {self.node})'
 
+class AssignNode:
+    def __init__(self, op_tok, node) -> None:
+        self.op_tok = op_tok
+        self.node = node
+
+    def __repr__(self) -> str:
+        return f'({self.op_tok}, {self.node})'
+
+class FunctionNode:
+    def __init__(self, func_tok, primary_node, assign_node) -> None:
+        self.func_tok = func_tok
+        self.primary_node = primary_node
+        self.assign_node = assign_node
+
+    def __repr__(self) -> str:
+        return f'({self.func_tok}, {self.primary_node}, {self.assign_node})'
 
 # PARSER
 
@@ -189,10 +212,37 @@ class Parser:
         return self.current_tok
         
     def parse(self):
-        res = self.unary()
-        return res
+        # res = self.function()
+        # return res
 
-    def factor(self):
+        blocks = []
+        for ct in self.tokens:
+            if ct.type == TT_GET:
+                blocks.append(self.function())
+        
+        return blocks 
+    
+    def function(self):
+        req_tok = self.current_tok
+
+        if self.current_tok.type == TT_GET:
+            self.advance()
+            if self.current_tok.type == TT_URL:
+                primary_node = self.primary()
+
+                if self.current_tok.type == TT_HTTP:
+                    assign_node = self.assing()
+            return FunctionNode(req_tok, primary_node, assign_node)
+
+
+    def assing(self):
+        if self.current_tok.type == TT_HTTP:
+            op_tok = self.current_tok
+            self.advance()
+            primary = self.primary()
+            return AssignNode(op_tok, primary)
+
+    def primary(self):
         tok = self.current_tok
 
         if tok.type == TT_URL:
@@ -201,31 +251,7 @@ class Parser:
         elif tok.type == TT_INT:
             self.advance()
             return NumberNode(tok)
-        
 
-    def unary(self):
-        while self.current_tok.type in (TT_GET, TT_HTTP):
-            op_tok = self.current_tok
-            self.advance()
-            factor = self.factor()
-
-        left = UnaryNode(op_tok, factor)
-
-        print(left)
-        return left
-    
-        
-    
-
-    def term(self):
-        left = self.factor()
-
-        while self.current_tok.type in KEYWORDS:
-            self.advance()
-            right = self.factor() 
-            #left = RequestNode(left, right)
-
-        return left
 
 lexer = Lexer('file_name', text)
 tokens, error = lexer.make_tokens()

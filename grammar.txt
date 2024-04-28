@@ -1,24 +1,4 @@
-expression  : literal
-            | unary
-            | binary ;
-
-literal     : URL | INT ;
-
-unary       : ( "GET" | "POST" | "HTTP" ) literal ;
-
-bynary      : expression "=" expression ;
-
-
-
-
-
-GET http://test.com
-HTTP 200
-
-              EQUAL         binary
-            /       \
-           /         \
-         GET       HTTP     unary
-        /             \
-      URL             200   literal 
-
+block       : [ function ]*
+function    : ( GET ) primary ( instructions )* ;
+instruction : ( HTTP ) primary ;
+primary     : URL | INT ;
