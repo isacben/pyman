@@ -1,7 +1,7 @@
 # another option: https://www.youtube.com/watch?v=LgsW0eGk-6U
 
-text = '''
-GET http://test.com
+text = '''GET http://test.com
+$
 HTTP 301
 GET http://123.com/?p=12
 HTTP 200
@@ -30,6 +30,10 @@ class Error:
 class IllegalCharError(Error):
     def __init__(self, pos_start, pos_end, details):
         super().__init__(pos_start, pos_end, 'Illegal Character', details)
+
+class InvalidSyntaxError(Error):
+    def __init__(self, pos_start, pos_end, details=''):
+            super().__init__(pos_start, pos_end, 'Invalid Syntax', details)
 
 
 class Position:
@@ -163,22 +167,6 @@ class NumberNode:
     def __repr__(self) -> str:
         return f'{self.tok}'
 
-class BinOpNode:
-    def __init__(self, left_node, right_node) -> None:
-       self.left_node = left_node
-       self.op_tok = Token(TT_IN)
-       self.right_node = right_node
-
-    def __repr__(self) -> str:
-        return f'({self.left_node}, {self.op_tok}, {self.right_node})' 
-
-class UnaryNode:
-    def __init__(self, op_tok, node) -> None:
-        self.op_tok = op_tok
-        self.node = node
-
-    def __repr__(self) -> str:
-        return f'({self.op_tok}, {self.node})'
 
 class AssignNode:
     def __init__(self, op_tok, node) -> None:
@@ -257,10 +245,11 @@ lexer = Lexer('file_name', text)
 tokens, error = lexer.make_tokens()
 
 if error:
-    print(error)
+    print(error.as_string())
     exit(1)
 
 print(tokens)
+
 # generate AST
 parser = Parser(tokens)
 ast = parser.parse()
