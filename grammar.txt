@@ -2,3 +2,11 @@ block       : [ function ]*
 function    : ( GET ) primary ( instructions )* ;
 instruction : ( HTTP ) primary ;
 primary     : URL | INT ;
+
+
+
+
+
+statement   : instruction* ;
+instruction : ( GET | HTTP ) primary ;
+primary     : STRING | INT ;

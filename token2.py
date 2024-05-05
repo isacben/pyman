@@ -1,14 +1,7 @@
 # another option: https://www.youtube.com/watch?v=LgsW0eGk-6U
 
-text = '''GET http://test.com
-HTTP 200
-GET http://123.com/?p=12
-HTTP 200
-GET http://yes.com
-HTTP 400
-GET http://no.com
-HTTP 300
-'''
+text = 'HTTP 200'
+
 
 DIGITS = '0123456789'
 LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -149,6 +142,8 @@ class Lexer:
 
         if id_str == "GET":
             return(Token(TT_GET))
+        elif id_str == "POST":
+            return(Token(TT_POST))
         elif id_str == "HTTP":
             return(Token(TT_HTTP))
         elif id_str.startswith('http://') or id_str.startswith('https://'):
@@ -156,27 +151,19 @@ class Lexer:
         else:
             tok_type = TT_STRING
         
-        return Token(tok_type, id_str)
+        return Token(tok_type, id_str, pos_start, self.pos)
 
 
 # NODES
 
-class UrlNode:
+class PrimaryNode:
     def __init__(self, tok) -> None:
         self.tok = tok
     
     def __repr__(self) -> str:
         return f'{self.tok}'
 
-class NumberNode:
-    def __init__(self, tok) -> None:
-        self.tok = tok
-    
-    def __repr__(self) -> str:
-        return f'{self.tok}'
-
-
-class AssignNode:
+class RequestNode:
     def __init__(self, op_tok, node) -> None:
         self.op_tok = op_tok
         self.node = node
@@ -208,8 +195,8 @@ class Parser:
         return self.current_tok
         
     def parse(self):
-        # res = self.function()
-        # return res
+        res = self.statement()
+        return res
 
         blocks = []
         for current_token in self.tokens:
@@ -231,22 +218,33 @@ class Parser:
             return FunctionNode(req_tok, primary_node, assign_node)
 
 
-    def assing(self):
-        if self.current_tok.type == TT_HTTP:
+    def statement(self):
+        if self.current_tok.type in (TT_GET, TT_POST):
             op_tok = self.current_tok
             self.advance()
+
+            if self.current_tok.type != TT_URL:
+                return InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected URL")
+
             primary = self.primary()
-            return AssignNode(op_tok, primary)
+            return RequestNode(op_tok, primary)
+
+        elif self.current_tok.type == TT_HTTP:
+            op_tok = self.current_tok
+            self.advance()
+
+            if self.current_tok.type != TT_INT:
+                return InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected http status code")
+
+            primary = self.primary()
+            return RequestNode(op_tok, primary)
+
+    
+    def url(self):
+        return 
 
     def primary(self):
-        tok = self.current_tok
-
-        if tok.type == TT_URL:
-            self.advance()
-            return UrlNode(tok)
-        elif tok.type == TT_INT:
-            self.advance()
-            return NumberNode(tok)
+        return PrimaryNode(self.current_tok)
 
 
 lexer = Lexer('file_name', text)
@@ -261,5 +259,9 @@ print(tokens)
 # generate AST
 parser = Parser(tokens)
 ast = parser.parse()
+
+# if error:
+#    print(error.as_string())
+#    exit()
 
 print(ast)
